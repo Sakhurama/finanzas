@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Wallet, TrendingDown, TrendingUp } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
+import Navbar from '../components/Navbar';
 import TarjetaEstadistica from '../components/TarjetaEstadistica';
 import TarjetaDineroLibre from '../components/TarjetaDineroLibre';
 import TarjetaEndeudamiento from '../components/TarjetaEndeudamiento';
@@ -11,7 +12,7 @@ import GestorDeudas from '../components/GestorDeudas';
 import TarjetaAsesorIA from '../components/TarjetaAsesorIA';
 
 export default function Dashboard() {
-  
+
   // Estado para ingresos y deudas
   const [incomes, setIncomes] = useState([]);
   const [debts, setDebts] = useState([]);
@@ -250,11 +251,8 @@ export default function Dashboard() {
 
         {/* Encabezado */}
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <Wallet className="w-8 h-8 text-indigo-600" />
-            Mi Control Financiero
-          </h1>
-          <p className="text-slate-500 mt-2">Gestiona tus ingresos, controla tus deudas fijas y planifica tu semana.</p>
+          <Navbar />
+          <p className="text-slate-500 mt-10">Gestiona tus ingresos, controla tus deudas fijas y planifica tu semana.</p>
         </header>
 
         {/* Panel de Resumen Principal */}
