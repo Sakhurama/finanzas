@@ -41,7 +41,7 @@ export default function Dashboard() {
   const guardarRegistro = async (name, amount, type) => {
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('finanzas_personales')
     .insert([
       { 
@@ -51,8 +51,14 @@ export default function Dashboard() {
         tipo: type       // "ingreso" o "deuda"
       }
     ])
+    .select()
 
-  if (error) console.error("Error al guardar:", error.message)
+  if (error) {
+    console.error("Error al guardar:", error.message)
+    return null;
+  }
+  
+  return data[0];
 }
 
   // Formateador de moneda (Estilo peso/dólar genérico)
@@ -102,20 +108,39 @@ export default function Dashboard() {
   }, []);
 
   // Manejadores para agregar
-  const handleAddIncome = (e) => {
+  const handleAddIncome = async (e) => {
     e.preventDefault();
     if (!newIncome.name || !newIncome.amount) return;
-    setIncomes([...incomes, { id: Date.now(), concepto: newIncome.name, monto: Number(newIncome.amount), tipo: 'ingreso' }]);
+    
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newIncome.name;
+    const amount = Number(newIncome.amount);
     setNewIncome({ name: '', amount: '' });
-    guardarRegistro(newIncome.name, newIncome.amount, 'ingreso');
+
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'ingreso');
+    
+    if (newRecord) {
+      setIncomes(prev => [...prev, newRecord]);
+    }
   };
 
-  const handleAddDebt = (e) => {
+  const handleAddDebt = async (e) => {
     e.preventDefault();
     if (!newDebt.name || !newDebt.amount) return;
-    setDebts([...debts, { id: Date.now(), concepto: newDebt.name, monto: Number(newDebt.amount), tipo: 'deuda' }]);
+    
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newDebt.name;
+    const amount = Number(newDebt.amount);
     setNewDebt({ name: '', amount: '' });
-    guardarRegistro(newDebt.name, newDebt.amount, 'deuda');
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'deuda');
+    
+    if (newRecord) {
+      setDebts(prev => [...prev, newRecord]);
+    }
   };
 
   // Manejadores para eliminar

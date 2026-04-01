@@ -6,7 +6,6 @@ import InputPesos from './InputPesos';
 export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, formatCurrency, guardarRegistro }) {
 
     const [displayValue, setDisplayValue] = useState('');
-    const [rawValue, setRawValue] = useState('');
 
     const handleChange = (e) => {
     // 1. Capturamos el valor y eliminamos cualquier cosa que no sea un dígito (\D)
@@ -29,12 +28,16 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
     setDisplayValue(formattedNumber);
   };
 
+  const handleSubmit = (e) => {
+    handleAddIncome(e);
+    setDisplayValue('');
+  };
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <h3 className="text-lg font-bold text-emerald-600 mb-4 border-b border-slate-100 pb-2">Mis Ingresos</h3>
 
-      <form onSubmit={handleAddIncome} className="flex gap-2 mb-6">
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
         <input 
           type="text" 
           placeholder="Ej. Salario" 
