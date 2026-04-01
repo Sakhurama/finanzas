@@ -26,8 +26,8 @@ export default function Dashboard() {
   const [adviceError, setAdviceError] = useState('');
 
   // Cálculos automáticos usando useMemo para optimización
-  const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.amount, 0), [incomes]);
-  const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.amount, 0), [debts]);
+  const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.monto, 0), [incomes]);
+  const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.monto, 0), [debts]);
   const freeMoney = totalIncome - totalDebts;
 
   // Porcentaje de endeudamiento (Deudas / Ingresos * 100)
@@ -41,7 +41,7 @@ export default function Dashboard() {
   const guardarRegistro = async (name, amount, type) => {
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('finanzas_personales')
     .insert([
       { 
@@ -51,8 +51,14 @@ export default function Dashboard() {
         tipo: type       // "ingreso" o "deuda"
       }
     ])
+    .select()
 
-  if (error) console.error("Error al guardar:", error.message)
+  if (error) {
+    console.error("Error al guardar:", error.message)
+    return null;
+  }
+  
+  return data[0];
 }
 
   // Formateador de moneda (Estilo peso/dólar genérico)
@@ -102,20 +108,39 @@ export default function Dashboard() {
   }, []);
 
   // Manejadores para agregar
-  const handleAddIncome = (e) => {
+  const handleAddIncome = async (e) => {
     e.preventDefault();
     if (!newIncome.name || !newIncome.amount) return;
-    setIncomes([...incomes, { id: Date.now(), name: newIncome.name, amount: Number(newIncome.amount) }]);
+    
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newIncome.name;
+    const amount = Number(newIncome.amount);
     setNewIncome({ name: '', amount: '' });
-    guardarRegistro(newIncome.name, newIncome.amount, 'ingreso');
+
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'ingreso');
+    
+    if (newRecord) {
+      setIncomes(prev => [...prev, newRecord]);
+    }
   };
 
-  const handleAddDebt = (e) => {
+  const handleAddDebt = async (e) => {
     e.preventDefault();
     if (!newDebt.name || !newDebt.amount) return;
-    setDebts([...debts, { id: Date.now(), name: newDebt.name, amount: Number(newDebt.amount) }]);
+    
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newDebt.name;
+    const amount = Number(newDebt.amount);
     setNewDebt({ name: '', amount: '' });
-    guardarRegistro(newDebt.name, newDebt.amount, 'deuda');
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'deuda');
+    
+    if (newRecord) {
+      setDebts(prev => [...prev, newRecord]);
+    }
   };
 
   // Manejadores para eliminar
@@ -170,11 +195,11 @@ export default function Dashboard() {
     setIsLoadingAdvice(true);
     setAdviceError('');
 
-    const apiKey = ""; // Proporcionada por el entorno de ejecución
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
     const systemInstruction = "Eres un asesor financiero empático y experto. Analiza el resumen financiero que te da el usuario. Dale una breve evaluación de su estado actual y dale 3 consejos muy específicos y accionables para mejorar o mantener su salud financiera, basados en los nombres de los ítems de ingresos y deudas. Responde en español, usando un tono amigable. Formatea el texto con viñetas claras.";
-    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.name).join(', ')})\nDeudas Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.name).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento: ${debtPercentage}%. \n¿Qué me aconsejas?`;
+    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.concepto).join(', ')})\nDeudas Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.concepto).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento: ${debtPercentage}%. \n¿Qué me aconsejas?`;
 
     const payload = {
       contents: [{ parts: [{ text: userPrompt }] }],

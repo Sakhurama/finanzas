@@ -1,9 +1,10 @@
 import React from 'react';
 import { Sparkles, Loader2, MessageSquareText, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 export default function TarjetaAsesorIA({ generateAdvice, isLoadingAdvice, incomesLength, advice, adviceError }) {
   return (
-    <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 p-6 md:p-8 rounded-2xl shadow-lg text-white mt-8">
+    <div className="bg-linear-to-r from-indigo-900 to-indigo-800 p-6 md:p-8 rounded-2xl shadow-lg text-white mt-8">
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <div className="flex-1">
           <h3 className="text-2xl font-bold flex items-center gap-2 mb-2 text-indigo-50">
@@ -51,8 +52,27 @@ export default function TarjetaAsesorIA({ generateAdvice, isLoadingAdvice, incom
                 <p>{adviceError}</p>
               </div>
             ) : (
-              <div className="text-indigo-50 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
-                {advice}
+              <div className="text-indigo-50 text-sm md:text-base leading-relaxed">
+                <ReactMarkdown
+                  components={{
+                    // Estilos para los párrafos normales
+                    p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                    
+                    // Estilos para las negritas (**texto**)
+                    strong: ({node, ...props}) => <strong className="font-bold text-indigo-200" {...props} />,
+                    
+                    // Estilos para las listas con viñetas
+                    ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-2" {...props} />,
+                    
+                    // Estilos para los elementos de la lista
+                    li: ({node, ...props}) => <li {...props} />,
+                    
+                    // Estilos para los títulos (por si la IA genera un ### Título)
+                    h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-6 mb-2 text-white" {...props} />
+                  }}
+                >
+                  {advice}
+                </ReactMarkdown>
               </div>
             )}
           </div>
