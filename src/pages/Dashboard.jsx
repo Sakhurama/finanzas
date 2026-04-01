@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Wallet, TrendingDown, TrendingUp } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 import TarjetaEstadistica from '../components/TarjetaEstadistica';
 import TarjetaDineroLibre from '../components/TarjetaDineroLibre';
@@ -10,14 +11,10 @@ import GestorDeudas from '../components/GestorDeudas';
 import TarjetaAsesorIA from '../components/TarjetaAsesorIA';
 
 export default function Dashboard() {
+  
   // Estado para ingresos y deudas
-  const [incomes, setIncomes] = useState([
-    { id: 1, name: 'Salario principal', amount: 3000000 },
-  ]);
-  const [debts, setDebts] = useState([
-    { id: 1, name: 'Arriendo / Hipoteca', amount: 900000 },
-    { id: 2, name: 'Servicios públicos', amount: 250000 },
-  ]);
+  const [incomes, setIncomes] = useState([]);
+  const [debts, setDebts] = useState([]);
 
   // Estado para los formularios
   const [newIncome, setNewIncome] = useState({ name: '', amount: '' });
@@ -40,6 +37,24 @@ export default function Dashboard() {
   const weeklyBudget = freeMoney > 0 ? (freeMoney * 0.8) / 4 : 0;
   const suggestedSavings = freeMoney > 0 ? freeMoney * 0.2 : 0;
 
+  // Función para guardar registros en Supabase
+  const guardarRegistro = async (name, amount, type) => {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { error } = await supabase
+    .from('finanzas_personales')
+    .insert([
+      { 
+        user_id: user.id, 
+        concepto: name, // Ejemplo: "Sueldo Logic"
+        monto: amount,   // Ejemplo: 3300000
+        tipo: type       // "ingreso" o "deuda"
+      }
+    ])
+
+  if (error) console.error("Error al guardar:", error.message)
+}
+
   // Formateador de moneda (Estilo peso/dólar genérico)
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-CO', {
@@ -50,12 +65,49 @@ export default function Dashboard() {
     }).format(amount);
   };
 
-  // Manejadores para agregar/eliminar items
+  // Función para cargar datos desde Supabase
+  const cargarDatos = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Consultamos todos los registros del usuario
+    const { data, error } = await supabase
+      .from('finanzas_personales')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error("Error al cargar datos:", error.message);
+      return;
+    }
+
+    console.log("Tipo de dato de 'data':", typeof data);
+    console.table(data);
+
+    // Filtramos los datos para separar ingresos y deudas
+    const ingresos = data.filter(r => r.tipo === 'ingreso');
+    const deudas = data.filter(r => r.tipo === 'deuda');
+
+    console.log("Ingresos:", ingresos);
+    console.log("Deudas:", deudas);
+
+    // Actualizamos los estados de React
+    setIncomes(ingresos);
+    setDebts(deudas);
+  };
+
+  // Usamos useEffect para que se ejecute solo al montar el componente
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // Manejadores para agregar
   const handleAddIncome = (e) => {
     e.preventDefault();
     if (!newIncome.name || !newIncome.amount) return;
     setIncomes([...incomes, { id: Date.now(), name: newIncome.name, amount: Number(newIncome.amount) }]);
     setNewIncome({ name: '', amount: '' });
+    guardarRegistro(newIncome.name, newIncome.amount, 'ingreso');
   };
 
   const handleAddDebt = (e) => {
@@ -63,10 +115,45 @@ export default function Dashboard() {
     if (!newDebt.name || !newDebt.amount) return;
     setDebts([...debts, { id: Date.now(), name: newDebt.name, amount: Number(newDebt.amount) }]);
     setNewDebt({ name: '', amount: '' });
+    guardarRegistro(newDebt.name, newDebt.amount, 'deuda');
   };
 
-  const removeIncome = (id) => setIncomes(incomes.filter(inc => inc.id !== id));
-  const removeDebt = (id) => setDebts(debts.filter(debt => debt.id !== id));
+  // Manejadores para eliminar
+  const removeIncome = async (id) => {
+  // 1. Eliminamos el registro directamente en la base de datos de Supabase
+  const { error } = await supabase
+    .from('finanzas_personales')
+    .delete()
+    .eq('id', id); // Esto es como un WHERE en SQL: "Borra donde el id sea igual a este id"
+
+  // 2. Manejamos cualquier posible error (ej. problemas de conexión)
+  if (error) {
+    console.error("Error al eliminar el ingreso:", error.message);
+    // Aquí podrías mostrar un alert() o un toast para avisarle al usuario
+    return; // Detenemos la ejecución para que no se borre de la pantalla si falló en la BD
+  }
+
+  // 3. Si no hubo errores en Supabase, actualizamos el estado de React (la UI)
+  setIncomes(incomes.filter(inc => inc.id !== id));
+};
+
+  const removeDebt = async (id) => {
+  // 1. Eliminamos el registro directamente en la base de datos de Supabase
+  const { error } = await supabase
+    .from('finanzas_personales')
+    .delete()
+    .eq('id', id); // Esto es como un WHERE en SQL: "Borra donde el id sea igual a este id"
+
+  // 2. Manejamos cualquier posible error (ej. problemas de conexión)
+  if (error) {
+    console.error("Error al eliminar la deuda:", error.message);
+    // Aquí podrías mostrar un alert() o un toast para avisarle al usuario
+    return; // Detenemos la ejecución para que no se borre de la pantalla si falló en la BD
+  }
+
+  // 3. Si no hubo errores en Supabase, actualizamos el estado de React (la UI)
+  setDebts(debts.filter(debt => debt.id !== id));
+};
 
   // Determinar color y mensaje de salud financiera
   const getFinancialHealth = () => {
@@ -182,6 +269,7 @@ export default function Dashboard() {
             handleAddIncome={handleAddIncome}
             removeIncome={removeIncome}
             formatCurrency={formatCurrency}
+            guardarRegistro={guardarRegistro}
           />
 
           <GestorDeudas
@@ -191,6 +279,7 @@ export default function Dashboard() {
             handleAddDebt={handleAddDebt}
             removeDebt={removeDebt}
             formatCurrency={formatCurrency}
+            guardarRegistro={guardarRegistro}
           />
         </div>
 

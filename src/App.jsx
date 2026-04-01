@@ -34,7 +34,7 @@ function App() {
   if (cargando) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px' }}>
-        <h2>Cargando tu aplicación...</h2>
+        <h2>Cargando...</h2>
       </div>
     )
   }

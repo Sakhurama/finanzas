@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import InputPesos from './InputPesos';
 
-export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, formatCurrency }) {
+export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, formatCurrency, guardarRegistro }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <h3 className="text-lg font-bold text-emerald-600 mb-4 border-b border-slate-100 pb-2">Mis Ingresos</h3>
@@ -41,9 +41,9 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
         ) : (
           incomes.map(income => (
             <div key={income.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-colors">
-              <span className="font-medium text-slate-700">{income.name}</span>
+              <span className="font-medium text-slate-700">{income.concepto}</span>
               <div className="flex items-center gap-4">
-                <span className="text-emerald-600 font-semibold">{formatCurrency(income.amount)}</span>
+                <span className="text-emerald-600 font-semibold">{formatCurrency(income.monto)}</span>
                 <button type="button" onClick={() => removeIncome(income.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>

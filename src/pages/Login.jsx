@@ -240,11 +240,11 @@ export default function Login({ onLogin }) {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <div className="flex justify-end mt-2">
+              {/* <div className="flex justify-end mt-2">
                 <a href="#" className="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors">
                   ¿Olvidaste tu contraseña?
                 </a>
-              </div>
+              </div> */}
             </div>
 
             {/* Botón de Submit */}
