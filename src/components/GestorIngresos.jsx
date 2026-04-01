@@ -47,7 +47,7 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
         />
         <input 
           type="text" 
-          placeholder="Monto" 
+          placeholder="$1.100.000" 
           className="w-full lg:w-1/3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           value={displayValue}
           onChange={handleChange}

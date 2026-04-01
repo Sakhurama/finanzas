@@ -1,33 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
-export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt, removeDebt, formatCurrency, guardarRegistro }) {
+export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt, removeDebt, formatCurrency }) {
+      const [displayValue, setDisplayValue] = useState('');
+  
+      const handleChange = (e) => {
+      // 1. Capturamos el valor y eliminamos cualquier cosa que no sea un dígito (\D)
+      const inputValue = e.target.value;
+      const numericString = inputValue.replace(/\D/g, '');
+  
+      // 2. Si el input queda vacío, limpiamos ambos estados
+      if (numericString === '') {
+        setDisplayValue('');
+        setNewDebt({...newDebt, amount: ''});
+        return;
+      }
+  
+      // 3. Formateamos el string numérico a formato de pesos (con puntos para miles)
+      const formatter = new Intl.NumberFormat('es-CO');
+      const formattedNumber = formatter.format(parseInt(numericString, 10));
+  
+      // 4. Actualizamos los estados
+      setNewDebt({...newDebt, amount: numericString});
+      setDisplayValue(formattedNumber);
+    };
+  
+    const handleSubmit = (e) => {
+      handleAddDebt(e);
+      setDisplayValue('');
+    };
+
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <h3 className="text-lg font-bold text-rose-600 mb-4 border-b border-slate-100 pb-2">Mis Deudas Fijas</h3>
       
       {/* Formulario Nueva Deuda */}
-      <form onSubmit={handleAddDebt} className="flex gap-2 mb-6">
+      <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-2 mb-6">
         <input 
           type="text" 
-          placeholder="Ej. Alquiler" 
+          placeholder="Ej. Arriendo" 
           className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
           value={newDebt.name}
           onChange={(e) => setNewDebt({...newDebt, name: e.target.value})}
         />
         <input 
-          type="number" 
-          placeholder="Monto" 
-          className="w-1/3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-          value={newDebt.amount}
-          onChange={(e) => setNewDebt({...newDebt, amount: e.target.value})}
+          type="text" 
+          placeholder="$500.000" 
+          className="w-full lg:w-1/3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+          value={displayValue}
+          onChange={handleChange}
         />
         <button 
           type="submit" 
-          className="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 w-full lg:w-auto bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition-colors"
           disabled={!newDebt.name || !newDebt.amount}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-auto h-5" />
+          <span className="font-bold lg:hidden">Agregar</span>
         </button>
       </form>
 
