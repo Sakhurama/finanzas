@@ -37,7 +37,7 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <h3 className="text-lg font-bold text-emerald-600 mb-4 border-b border-slate-100 pb-2">Mis Ingresos</h3>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
+      <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-2 mb-6">
         <input 
           type="text" 
           placeholder="Ej. Salario" 
@@ -48,16 +48,17 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
         <input 
           type="text" 
           placeholder="Monto" 
-          className="w-1/3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full lg:w-1/3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           value={displayValue}
           onChange={handleChange}
         />
         <button 
           type="submit" 
-          className="bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 w-full lg:w-auto bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg transition-colors"
           disabled={!newIncome.name || !newIncome.amount}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-auto h-5" />
+          <span className="font-bold lg:hidden">Agregar</span>
         </button>
       </form>
 
