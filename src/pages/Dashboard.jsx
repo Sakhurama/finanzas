@@ -224,15 +224,21 @@ export default function Dashboard() {
 
     try {
       const data = await fetchWithRetry();
+      console.log("Respuesta cruda de Gemini:", data); 
+
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
       if (text) {
         setAdvice(text);
+      } else if (data.promptFeedback?.blockReason) {
+        throw new Error(`Google bloqueó la respuesta por: ${data.promptFeedback.blockReason}`);
       } else {
-        throw new Error("Respuesta vacía de la API");
+        throw new Error("La API no devolvió candidatos válidos.");
       }
     } catch (error) {
-      console.error("Error al obtener consejo de la IA:", error);
-      setAdviceError("Lo siento, no pude conectar con el asesor IA en este momento. Intenta de nuevo más tarde.");
+      console.error("Detalle completo del error:", error);
+      
+      setAdviceError(`Hubo un problema: ${error.message || 'Intenta de nuevo más tarde.'}`);
     } finally {
       setIsLoadingAdvice(false);
     }
