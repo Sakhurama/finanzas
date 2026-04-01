@@ -26,8 +26,8 @@ export default function Dashboard() {
   const [adviceError, setAdviceError] = useState('');
 
   // Cálculos automáticos usando useMemo para optimización
-  const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.amount, 0), [incomes]);
-  const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.amount, 0), [debts]);
+  const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.monto, 0), [incomes]);
+  const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.monto, 0), [debts]);
   const freeMoney = totalIncome - totalDebts;
 
   // Porcentaje de endeudamiento (Deudas / Ingresos * 100)
@@ -105,7 +105,7 @@ export default function Dashboard() {
   const handleAddIncome = (e) => {
     e.preventDefault();
     if (!newIncome.name || !newIncome.amount) return;
-    setIncomes([...incomes, { id: Date.now(), name: newIncome.name, amount: Number(newIncome.amount) }]);
+    setIncomes([...incomes, { id: Date.now(), concepto: newIncome.name, monto: Number(newIncome.amount), tipo: 'ingreso' }]);
     setNewIncome({ name: '', amount: '' });
     guardarRegistro(newIncome.name, newIncome.amount, 'ingreso');
   };
@@ -113,7 +113,7 @@ export default function Dashboard() {
   const handleAddDebt = (e) => {
     e.preventDefault();
     if (!newDebt.name || !newDebt.amount) return;
-    setDebts([...debts, { id: Date.now(), name: newDebt.name, amount: Number(newDebt.amount) }]);
+    setDebts([...debts, { id: Date.now(), concepto: newDebt.name, monto: Number(newDebt.amount), tipo: 'deuda' }]);
     setNewDebt({ name: '', amount: '' });
     guardarRegistro(newDebt.name, newDebt.amount, 'deuda');
   };
@@ -174,7 +174,7 @@ export default function Dashboard() {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
     const systemInstruction = "Eres un asesor financiero empático y experto. Analiza el resumen financiero que te da el usuario. Dale una breve evaluación de su estado actual y dale 3 consejos muy específicos y accionables para mejorar o mantener su salud financiera, basados en los nombres de los ítems de ingresos y deudas. Responde en español, usando un tono amigable. Formatea el texto con viñetas claras.";
-    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.name).join(', ')})\nDeudas Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.name).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento: ${debtPercentage}%. \n¿Qué me aconsejas?`;
+    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.concepto).join(', ')})\nDeudas Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.concepto).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento: ${debtPercentage}%. \n¿Qué me aconsejas?`;
 
     const payload = {
       contents: [{ parts: [{ text: userPrompt }] }],
