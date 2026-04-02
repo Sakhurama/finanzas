@@ -55,7 +55,7 @@ return (
             
             <button
             onClick={handleLogout}
-            className="flex items-center gap-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors cursor-pointer"
             >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión
