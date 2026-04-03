@@ -113,17 +113,27 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newIncome.name || !newIncome.amount) return;
     
-    // Extraemos valores y limpiamos campos inmediatamente
     const name = newIncome.name;
     const amount = Number(newIncome.amount);
-    setNewIncome({ name: '', amount: '' });
+    
+    // Generar ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'ingreso' };
 
+    // Actualización optimista de la UI
+    setIncomes(prev => [...prev, tempRecord]);
+    setNewIncome({ name: '', amount: '' });
 
     // Guardamos y obtenemos el registro real con el ID de la base de datos
     const newRecord = await guardarRegistro(name, amount, 'ingreso');
     
     if (newRecord) {
-      setIncomes(prev => [...prev, newRecord]);
+      // Reemplazamos el registro temporal con el real
+      setIncomes(prev => prev.map(inc => inc.id === tempId ? newRecord : inc));
+    } else {
+      // Revertimos el estado en caso de error
+      setIncomes(prev => prev.filter(inc => inc.id !== tempId));
+      alert("Hubo un error al guardar el ingreso. Por favor, intenta de nuevo.");
     }
   };
 
@@ -131,16 +141,27 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newDebt.name || !newDebt.amount) return;
     
-    // Extraemos valores y limpiamos campos inmediatamente
     const name = newDebt.name;
     const amount = Number(newDebt.amount);
+    
+    // Generar ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'deuda' };
+
+    // Actualización optimista de la UI
+    setDebts(prev => [...prev, tempRecord]);
     setNewDebt({ name: '', amount: '' });
 
     // Guardamos y obtenemos el registro real con el ID de la base de datos
     const newRecord = await guardarRegistro(name, amount, 'deuda');
     
     if (newRecord) {
-      setDebts(prev => [...prev, newRecord]);
+      // Reemplazamos el registro temporal con el real
+      setDebts(prev => prev.map(debt => debt.id === tempId ? newRecord : debt));
+    } else {
+      // Revertimos el estado en caso de error
+      setDebts(prev => prev.filter(debt => debt.id !== tempId));
+      alert("Hubo un error al guardar la deuda. Por favor, intenta de nuevo.");
     }
   };
 
