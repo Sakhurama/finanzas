@@ -3,7 +3,7 @@ import { Wallet } from 'lucide-react';
 
 export default function TarjetaDineroLibre({ freeMoney }) {
   return (
-    <div className="bg-indigo-600 p-6 rounded-2xl shadow-md text-white flex flex-col justify-center lg:col-span-2 relative overflow-hidden">
+    <div className="bg-indigo-600 p-6 rounded-2xl shadow-md text-white flex flex-col justify-center relative overflow-hidden">
       <div className="absolute top-0 right-0 -mt-4 -mr-4 opacity-10">
         <Wallet className="w-32 h-32" />
       </div>

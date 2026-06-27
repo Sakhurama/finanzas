@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Wallet, TrendingDown, TrendingUp } from 'lucide-react';
+import { Wallet, TrendingDown, TrendingUp, ShoppingBag, CreditCard } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 import Navbar from '../components/Navbar';
@@ -9,17 +9,26 @@ import TarjetaEndeudamiento from '../components/TarjetaEndeudamiento';
 import TarjetaPresupuesto from '../components/TarjetaPresupuesto';
 import GestorIngresos from '../components/GestorIngresos';
 import GestorDeudas from '../components/GestorDeudas';
+import GestorGastosVariables from '../components/GestorGastosVariables';
+import GestorDeudasReales from '../components/GestorDeudasReales';
 import TarjetaAsesorIA from '../components/TarjetaAsesorIA';
 
 export default function Dashboard() {
 
-  // Estado para ingresos y deudas
+  // Estado para ingresos, gastos fijos, gastos variables y deudas reales
   const [incomes, setIncomes] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [variableExpenses, setVariableExpenses] = useState([]);
+  const [realDebts, setRealDebts] = useState([]);
 
   // Estado para los formularios
   const [newIncome, setNewIncome] = useState({ name: '', amount: '' });
   const [newDebt, setNewDebt] = useState({ name: '', amount: '' });
+  const [newVariableExpense, setNewVariableExpense] = useState({ name: '', amount: '' });
+  const [newRealDebt, setNewRealDebt] = useState({ name: '', amount: '' });
+
+  // Umbral de endeudamiento saludable (ajustable por el usuario). Default sugerido: 36% (estándar deuda-ingreso/DTI)
+  const [umbral, setUmbral] = useState(36);
 
   // Estado para la IA de Gemini
   const [advice, setAdvice] = useState('');
@@ -29,10 +38,12 @@ export default function Dashboard() {
   // Cálculos automáticos usando useMemo para optimización
   const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.monto, 0), [incomes]);
   const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.monto, 0), [debts]);
-  const freeMoney = totalIncome - totalDebts;
+  const totalVariableExpenses = useMemo(() => variableExpenses.reduce((acc, curr) => acc + curr.monto, 0), [variableExpenses]);
+  const totalRealDebts = useMemo(() => realDebts.reduce((acc, curr) => acc + curr.monto, 0), [realDebts]);
+  const freeMoney = totalIncome - totalDebts - totalVariableExpenses - totalRealDebts;
 
-  // Porcentaje de endeudamiento (Deudas / Ingresos * 100)
-  const debtPercentage = totalIncome > 0 ? ((totalDebts / totalIncome) * 100).toFixed(1) : 0;
+  // Porcentaje de endeudamiento (Deudas reales / Ingresos * 100). Solo cuentan las deudas reales (préstamos, tarjetas), no los gastos fijos.
+  const debtPercentage = totalIncome > 0 ? ((totalRealDebts / totalIncome) * 100).toFixed(1) : 0;
 
   // Gasto semanal saludable: Dinero libre menos un 20% de ahorro sugerido, dividido en 4 semanas
   const weeklyBudget = freeMoney > 0 ? (freeMoney * 0.8) / 4 : 0;
@@ -91,17 +102,47 @@ export default function Dashboard() {
     console.log("Tipo de dato de 'data':", typeof data);
     console.table(data);
 
-    // Filtramos los datos para separar ingresos y deudas
+    // Filtramos los datos para separar ingresos, gastos fijos, gastos variables y deudas reales
     const ingresos = data.filter(r => r.tipo === 'ingreso');
     const deudas = data.filter(r => r.tipo === 'deuda');
-
-    console.log("Ingresos:", ingresos);
-    console.log("Deudas:", deudas);
+    const gastosVariables = data.filter(r => r.tipo === 'gasto_variable');
+    const deudasReales = data.filter(r => r.tipo === 'deuda_real');
 
     // Actualizamos los estados de React
     setIncomes(ingresos);
     setDebts(deudas);
+    setVariableExpenses(gastosVariables);
+    setRealDebts(deudasReales);
+
+    // Cargamos la preferencia del umbral de endeudamiento (si la tabla existe)
+    try {
+      const { data: pref } = await supabase
+        .from('preferencias_usuario')
+        .select('umbral_endeudamiento')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (pref && pref.umbral_endeudamiento != null) {
+        setUmbral(pref.umbral_endeudamiento);
+      }
+    } catch (e) {
+      console.warn("No se pudo cargar la preferencia de umbral:", e.message);
+    }
   };
+
+  // Guarda el umbral de endeudamiento elegido por el usuario en Supabase
+  const guardarUmbral = async (valor) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('preferencias_usuario')
+      .upsert({ user_id: user.id, umbral_endeudamiento: valor }, { onConflict: 'user_id' });
+
+    if (error) console.error("Error al guardar el umbral:", error.message);
+  };
+
+  // setUmbral actualiza la UI al mover el slider; guardarUmbral persiste al soltar (evita escrituras excesivas)
 
   // Usamos useEffect para que se ejecute solo al montar el componente
   useEffect(() => {
@@ -165,6 +206,40 @@ export default function Dashboard() {
     }
   };
 
+  const handleAddVariableExpense = async (e) => {
+    e.preventDefault();
+    if (!newVariableExpense.name || !newVariableExpense.amount) return;
+
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newVariableExpense.name;
+    const amount = Number(newVariableExpense.amount);
+    setNewVariableExpense({ name: '', amount: '' });
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'gasto_variable');
+
+    if (newRecord) {
+      setVariableExpenses(prev => [...prev, newRecord]);
+    }
+  };
+
+  const handleAddRealDebt = async (e) => {
+    e.preventDefault();
+    if (!newRealDebt.name || !newRealDebt.amount) return;
+
+    // Extraemos valores y limpiamos campos inmediatamente
+    const name = newRealDebt.name;
+    const amount = Number(newRealDebt.amount);
+    setNewRealDebt({ name: '', amount: '' });
+
+    // Guardamos y obtenemos el registro real con el ID de la base de datos
+    const newRecord = await guardarRegistro(name, amount, 'deuda_real');
+
+    if (newRecord) {
+      setRealDebts(prev => [...prev, newRecord]);
+    }
+  };
+
   // Manejadores para eliminar
   const removeIncome = async (id) => {
   // 1. Eliminamos el registro directamente en la base de datos de Supabase
@@ -202,12 +277,46 @@ export default function Dashboard() {
   setDebts(debts.filter(debt => debt.id !== id));
 };
 
-  // Determinar color y mensaje de salud financiera
+  const removeVariableExpense = async (id) => {
+  // 1. Eliminamos el registro directamente en la base de datos de Supabase
+  const { error } = await supabase
+    .from('finanzas_personales')
+    .delete()
+    .eq('id', id);
+
+  // 2. Manejamos cualquier posible error (ej. problemas de conexión)
+  if (error) {
+    console.error("Error al eliminar el gasto variable:", error.message);
+    return;
+  }
+
+  // 3. Si no hubo errores en Supabase, actualizamos el estado de React (la UI)
+  setVariableExpenses(variableExpenses.filter(expense => expense.id !== id));
+};
+
+  const removeRealDebt = async (id) => {
+  // 1. Eliminamos el registro directamente en la base de datos de Supabase
+  const { error } = await supabase
+    .from('finanzas_personales')
+    .delete()
+    .eq('id', id);
+
+  // 2. Manejamos cualquier posible error (ej. problemas de conexión)
+  if (error) {
+    console.error("Error al eliminar la deuda:", error.message);
+    return;
+  }
+
+  // 3. Si no hubo errores en Supabase, actualizamos el estado de React (la UI)
+  setRealDebts(realDebts.filter(debt => debt.id !== id));
+};
+
+  // Determinar color y mensaje de salud financiera (relativo al umbral elegido por el usuario)
   const getFinancialHealth = () => {
     if (totalIncome === 0) return { color: 'text-gray-500', bg: 'bg-gray-100', text: 'Ingresa tus datos' };
-    if (debtPercentage < 30) return { color: 'text-emerald-600', bg: 'bg-emerald-100', text: 'Excelente (Menos del 30%)' };
-    if (debtPercentage <= 40) return { color: 'text-amber-500', bg: 'bg-amber-100', text: 'Precaución (30% - 40%)' };
-    return { color: 'text-rose-500', bg: 'bg-rose-100', text: 'Peligro (Más del 40%)' };
+    if (debtPercentage <= umbral) return { color: 'text-emerald-600', bg: 'bg-emerald-100', text: `Saludable (≤ ${umbral}%)` };
+    if (debtPercentage <= umbral + 7) return { color: 'text-amber-500', bg: 'bg-amber-100', text: 'Precaución' };
+    return { color: 'text-rose-500', bg: 'bg-rose-100', text: 'Riesgo' };
   };
 
   const healthStatus = getFinancialHealth();
@@ -220,7 +329,7 @@ export default function Dashboard() {
     const url = '/api/getAdvice';
 
     const systemInstruction = "Eres un asesor financiero empático y experto. Analiza el resumen financiero que te da el usuario. Dale una breve evaluación de su estado actual y dale 3 consejos muy específicos y accionables para mejorar o mantener su salud financiera, basados en los nombres de los ítems de ingresos y deudas. Responde en español, usando un tono amigable. Formatea el texto con viñetas claras.";
-    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.concepto).join(', ')})\nDeudas Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.concepto).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento: ${debtPercentage}%. \n¿Qué me aconsejas?`;
+    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.concepto).join(', ')})\nGastos Fijos Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.concepto).join(', ')})\nGastos Variables Totales: ${formatCurrency(totalVariableExpenses)} (Detalles: ${variableExpenses.map(g => g.concepto).join(', ')})\nDeudas Reales (cuotas mensuales de préstamos/tarjetas): ${formatCurrency(totalRealDebts)} (Detalles: ${realDebts.map(d => d.concepto).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento (solo deudas reales sobre ingresos): ${debtPercentage}%. \n¿Qué me aconsejas?`;
 
     const payload = {
       contents: [{ parts: [{ text: userPrompt }] }],
@@ -286,20 +395,37 @@ export default function Dashboard() {
           />
 
           <TarjetaEstadistica
-            title="Deudas Fijas Totales"
+            title="Gastos Fijos"
             amount={formatCurrency(totalDebts)}
             icon={TrendingDown}
             iconColorClass="text-rose-500"
           />
 
-          <TarjetaDineroLibre freeMoney={formatCurrency(freeMoney)} />
+          <TarjetaEstadistica
+            title="Gastos Variables"
+            amount={formatCurrency(totalVariableExpenses)}
+            icon={ShoppingBag}
+            iconColorClass="text-amber-500"
+          />
+
+          <TarjetaEstadistica
+            title="Deudas"
+            amount={formatCurrency(totalRealDebts)}
+            icon={CreditCard}
+            iconColorClass="text-violet-500"
+          />
         </div>
+
+        <TarjetaDineroLibre freeMoney={formatCurrency(freeMoney)} />
 
         {/* Panel de Análisis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TarjetaEndeudamiento
             debtPercentage={debtPercentage}
             healthStatus={healthStatus}
+            umbral={umbral}
+            onUmbralInput={setUmbral}
+            onUmbralCommit={guardarUmbral}
           />
 
           <TarjetaPresupuesto
@@ -329,6 +455,27 @@ export default function Dashboard() {
             removeDebt={removeDebt}
             formatCurrency={formatCurrency}
             guardarRegistro={guardarRegistro}
+          />
+        </div>
+
+        {/* Deudas reales y Gastos variables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <GestorDeudasReales
+            realDebts={realDebts}
+            newRealDebt={newRealDebt}
+            setNewRealDebt={setNewRealDebt}
+            handleAddRealDebt={handleAddRealDebt}
+            removeRealDebt={removeRealDebt}
+            formatCurrency={formatCurrency}
+          />
+
+          <GestorGastosVariables
+            variableExpenses={variableExpenses}
+            newVariableExpense={newVariableExpense}
+            setNewVariableExpense={setNewVariableExpense}
+            handleAddVariableExpense={handleAddVariableExpense}
+            removeVariableExpense={removeVariableExpense}
+            formatCurrency={formatCurrency}
           />
         </div>
 
