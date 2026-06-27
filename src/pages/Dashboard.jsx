@@ -21,6 +21,9 @@ export default function Dashboard() {
   const [variableExpenses, setVariableExpenses] = useState([]);
   const [realDebts, setRealDebts] = useState([]);
 
+  // Nombre del usuario logueado (proviene de la sesión de Supabase / Google OAuth)
+  const [userName, setUserName] = useState('Usuario');
+
   // Estado para los formularios
   const [newIncome, setNewIncome] = useState({ name: '', amount: '' });
   const [newDebt, setNewDebt] = useState({ name: '', amount: '' });
@@ -87,6 +90,14 @@ export default function Dashboard() {
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Guardamos el nombre del usuario para mostrarlo en la barra de navegación
+    const nombre =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email ||
+      'Usuario';
+    setUserName(nombre);
 
     // Consultamos todos los registros del usuario
     const { data, error } = await supabase
@@ -381,7 +392,7 @@ export default function Dashboard() {
 
         {/* Encabezado */}
         <header className="mb-8">
-          <Navbar />
+          <Navbar userName={userName} />
           <p className="text-slate-500 mt-10">Gestiona tus ingresos, controla tus deudas fijas y planifica tu semana.</p>
         </header>
 
