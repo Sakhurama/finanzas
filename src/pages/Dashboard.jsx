@@ -72,9 +72,50 @@ export default function Dashboard() {
     console.error("Error al guardar:", error.message)
     return null;
   }
-  
+
   return data[0];
 }
+
+  // Función para actualizar un registro existente en Supabase (edición en línea)
+  const actualizarRegistro = async (id, name, amount) => {
+    const { data, error } = await supabase
+      .from('finanzas_personales')
+      .update({ concepto: name, monto: amount })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error("Error al actualizar:", error.message);
+      return null;
+    }
+
+    return data[0];
+  };
+
+  // Manejadores para editar (reemplazan el registro en su estado correspondiente)
+  const updateIncome = async (id, name, amount) => {
+    const updated = await actualizarRegistro(id, name, amount);
+    if (updated) setIncomes(prev => prev.map(inc => inc.id === id ? updated : inc));
+    else alert("No se pudo actualizar el ingreso. Intenta de nuevo.");
+  };
+
+  const updateDebt = async (id, name, amount) => {
+    const updated = await actualizarRegistro(id, name, amount);
+    if (updated) setDebts(prev => prev.map(debt => debt.id === id ? updated : debt));
+    else alert("No se pudo actualizar el gasto fijo. Intenta de nuevo.");
+  };
+
+  const updateVariableExpense = async (id, name, amount) => {
+    const updated = await actualizarRegistro(id, name, amount);
+    if (updated) setVariableExpenses(prev => prev.map(exp => exp.id === id ? updated : exp));
+    else alert("No se pudo actualizar el gasto variable. Intenta de nuevo.");
+  };
+
+  const updateRealDebt = async (id, name, amount) => {
+    const updated = await actualizarRegistro(id, name, amount);
+    if (updated) setRealDebts(prev => prev.map(debt => debt.id === id ? updated : debt));
+    else alert("No se pudo actualizar la deuda. Intenta de nuevo.");
+  };
 
   // Formateador de moneda (Estilo peso/dólar genérico)
   const formatCurrency = (amount) => {
@@ -454,6 +495,7 @@ export default function Dashboard() {
             setNewIncome={setNewIncome}
             handleAddIncome={handleAddIncome}
             removeIncome={removeIncome}
+            updateIncome={updateIncome}
             formatCurrency={formatCurrency}
             guardarRegistro={guardarRegistro}
           />
@@ -464,6 +506,7 @@ export default function Dashboard() {
             setNewDebt={setNewDebt}
             handleAddDebt={handleAddDebt}
             removeDebt={removeDebt}
+            updateDebt={updateDebt}
             formatCurrency={formatCurrency}
             guardarRegistro={guardarRegistro}
           />
@@ -477,6 +520,7 @@ export default function Dashboard() {
             setNewRealDebt={setNewRealDebt}
             handleAddRealDebt={handleAddRealDebt}
             removeRealDebt={removeRealDebt}
+            updateRealDebt={updateRealDebt}
             formatCurrency={formatCurrency}
           />
 
@@ -486,6 +530,7 @@ export default function Dashboard() {
             setNewVariableExpense={setNewVariableExpense}
             handleAddVariableExpense={handleAddVariableExpense}
             removeVariableExpense={removeVariableExpense}
+            updateVariableExpense={updateVariableExpense}
             formatCurrency={formatCurrency}
           />
         </div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import FilaRegistro from './FilaRegistro';
 
-export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealDebt, handleAddRealDebt, removeRealDebt, formatCurrency }) {
+export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealDebt, handleAddRealDebt, removeRealDebt, updateRealDebt, formatCurrency }) {
       const [displayValue, setDisplayValue] = useState('');
 
       const handleChange = (e) => {
@@ -70,15 +71,14 @@ export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealD
           <p className="text-center text-slate-400 text-sm py-4">No hay deudas registradas</p>
         ) : (
           realDebts.map(debt => (
-            <div key={debt.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-colors">
-              <span className="font-medium text-slate-700">{debt.concepto}</span>
-              <div className="flex items-center gap-4">
-                <span className="text-violet-600 font-semibold">{formatCurrency(debt.monto)}</span>
-                <button type="button" onClick={() => removeRealDebt(debt.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            <FilaRegistro
+              key={debt.id}
+              item={debt}
+              color="violet"
+              onUpdate={updateRealDebt}
+              onRemove={removeRealDebt}
+              formatCurrency={formatCurrency}
+            />
           ))
         )}
       </div>

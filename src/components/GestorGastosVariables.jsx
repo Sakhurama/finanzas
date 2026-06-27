@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import FilaRegistro from './FilaRegistro';
 
-export default function GestorGastosVariables({ variableExpenses, newVariableExpense, setNewVariableExpense, handleAddVariableExpense, removeVariableExpense, formatCurrency }) {
+export default function GestorGastosVariables({ variableExpenses, newVariableExpense, setNewVariableExpense, handleAddVariableExpense, removeVariableExpense, updateVariableExpense, formatCurrency }) {
       const [displayValue, setDisplayValue] = useState('');
 
       const handleChange = (e) => {
@@ -67,15 +68,14 @@ export default function GestorGastosVariables({ variableExpenses, newVariableExp
           <p className="text-center text-slate-400 text-sm py-4">No hay gastos variables registrados</p>
         ) : (
           variableExpenses.map(expense => (
-            <div key={expense.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-colors">
-              <span className="font-medium text-slate-700">{expense.concepto}</span>
-              <div className="flex items-center gap-4">
-                <span className="text-amber-600 font-semibold">{formatCurrency(expense.monto)}</span>
-                <button type="button" onClick={() => removeVariableExpense(expense.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            <FilaRegistro
+              key={expense.id}
+              item={expense}
+              color="amber"
+              onUpdate={updateVariableExpense}
+              onRemove={removeVariableExpense}
+              formatCurrency={formatCurrency}
+            />
           ))
         )}
       </div>

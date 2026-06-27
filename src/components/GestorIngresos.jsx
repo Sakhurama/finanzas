@@ -1,9 +1,10 @@
 import React from 'react';
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import InputPesos from './InputPesos';
+import FilaRegistro from './FilaRegistro';
 
-export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, formatCurrency, guardarRegistro }) {
+export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, updateIncome, formatCurrency, guardarRegistro }) {
 
     const [displayValue, setDisplayValue] = useState('');
 
@@ -68,15 +69,14 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
           <p className="text-center text-slate-400 text-sm py-4">No hay ingresos registrados</p>
         ) : (
           incomes.map(income => (
-            <div key={income.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-colors">
-              <span className="font-medium text-slate-700">{income.concepto}</span>
-              <div className="flex items-center gap-4">
-                <span className="text-emerald-600 font-semibold">{formatCurrency(income.monto)}</span>
-                <button type="button" onClick={() => removeIncome(income.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            <FilaRegistro
+              key={income.id}
+              item={income}
+              color="emerald"
+              onUpdate={updateIncome}
+              onRemove={removeIncome}
+              formatCurrency={formatCurrency}
+            />
           ))
         )}
       </div>
