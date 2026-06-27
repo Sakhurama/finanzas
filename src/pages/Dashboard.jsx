@@ -380,12 +380,59 @@ export default function Dashboard() {
 
     const url = '/api/getAdvice';
 
-    const systemInstruction = "Eres un asesor financiero empático y experto. Analiza el resumen financiero que te da el usuario. Dale una breve evaluación de su estado actual y dale 3 consejos muy específicos y accionables para mejorar o mantener su salud financiera, basados en los nombres de los ítems de ingresos y deudas. Responde en español, usando un tono amigable. Formatea el texto con viñetas claras.";
-    const userPrompt = `Aquí están mis finanzas mensuales:\nIngresos Totales: ${formatCurrency(totalIncome)} (Detalles: ${incomes.map(i => i.concepto).join(', ')})\nGastos Fijos Totales: ${formatCurrency(totalDebts)} (Detalles: ${debts.map(d => d.concepto).join(', ')})\nGastos Variables Totales: ${formatCurrency(totalVariableExpenses)} (Detalles: ${variableExpenses.map(g => g.concepto).join(', ')})\nDeudas Reales (cuotas mensuales de préstamos/tarjetas): ${formatCurrency(totalRealDebts)} (Detalles: ${realDebts.map(d => d.concepto).join(', ')})\nDinero Libre: ${formatCurrency(freeMoney)}\nPorcentaje de Endeudamiento (solo deudas reales sobre ingresos): ${debtPercentage}%. \n¿Qué me aconsejas?`;
+    // Lista los ítems de una categoría con su monto, para que la IA pueda dar consejos con cifras concretas
+    const listarItems = (items) =>
+      items.length
+        ? items.map(i => `${i.concepto} (${formatCurrency(i.monto)})`).join('; ')
+        : 'ninguno';
+
+    const systemInstruction = `Eres un asesor financiero personal, empático y experto en finanzas personales para Colombia (moneda COP). Analizas el resumen estructurado de un usuario y respondes SIEMPRE en español, con tono cercano y motivador.
+
+Distingue bien las cuatro categorías:
+- Ingresos.
+- Gastos fijos: necesarios y difíciles de recortar (arriendo, servicios).
+- Gastos variables: ajustables, son la primera palanca para recortar.
+- Deudas reales: cuotas mensuales de préstamos y tarjetas.
+
+Estructura tu respuesta en Markdown así (sin tablas, sin títulos de nivel 1 o 2):
+1. Un diagnóstico breve (2-3 frases) que compare su porcentaje de endeudamiento contra el umbral que EL PROPIO USUARIO definió como saludable, e indique si su dinero libre es positivo o negativo.
+2. Una sección "### Consejos" con 3 o 4 viñetas. Cada consejo debe ser específico, accionable y con cifras concretas, refiriéndose a ítems por su nombre y monto cuando aporte valor.
+3. Una frase final de ánimo.
+
+Reglas para los consejos:
+- Si el porcentaje de endeudamiento supera el umbral del usuario, prioriza estrategias para reducir las deudas reales.
+- Si el dinero libre es negativo, el consejo principal debe ser cómo equilibrar el presupuesto, recortando primero gastos variables concretos y solo después gastos fijos.
+- Usa el presupuesto semanal sugerido y el ahorro mensual sugerido que te da la app como referencia; no inventes otras cifras de referencia.
+- Sé concreto y conciso; evita consejos genéricos.`;
+
+    const userPrompt = `Estas son mis finanzas mensuales (moneda COP):
+
+INGRESOS — Total: ${formatCurrency(totalIncome)}
+Detalle: ${listarItems(incomes)}
+
+GASTOS FIJOS (necesarios) — Total: ${formatCurrency(totalDebts)}
+Detalle: ${listarItems(debts)}
+
+GASTOS VARIABLES (ajustables) — Total: ${formatCurrency(totalVariableExpenses)}
+Detalle: ${listarItems(variableExpenses)}
+
+DEUDAS REALES (cuotas mensuales de préstamos/tarjetas) — Total: ${formatCurrency(totalRealDebts)}
+Detalle: ${listarItems(realDebts)}
+
+INDICADORES
+- Dinero libre al mes: ${formatCurrency(freeMoney)}
+- Porcentaje de endeudamiento (deudas reales sobre ingresos): ${debtPercentage}%
+- Umbral que considero saludable: ${umbral}%
+- Estado de salud según la app: ${healthStatus.text}
+- Presupuesto semanal sugerido por la app: ${formatCurrency(weeklyBudget)}
+- Ahorro mensual sugerido por la app (20% del dinero libre): ${formatCurrency(suggestedSavings)}
+
+Dame tu análisis y tus consejos.`;
 
     const payload = {
       contents: [{ parts: [{ text: userPrompt }] }],
-      systemInstruction: { parts: [{ text: systemInstruction }] }
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      generationConfig: { temperature: 0.6, maxOutputTokens: 800 }
     };
 
     const fetchWithRetry = async (retries = 5, delay = 1000) => {
