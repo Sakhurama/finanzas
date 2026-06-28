@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Wallet, TrendingDown, TrendingUp, ShoppingBag, CreditCard } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { formatCurrency } from '../utils/format';
+import { generarResumenMarkdown } from '../utils/exportarMarkdown';
 
 import Navbar from '../components/Navbar';
 import TarjetaEstadistica from '../components/TarjetaEstadistica';
@@ -12,6 +14,7 @@ import GestorDeudas from '../components/GestorDeudas';
 import GestorGastosVariables from '../components/GestorGastosVariables';
 import GestorDeudasReales from '../components/GestorDeudasReales';
 import TarjetaAsesorIA from '../components/TarjetaAsesorIA';
+import TarjetaExportar from '../components/TarjetaExportar';
 
 export default function Dashboard() {
 
@@ -39,10 +42,12 @@ export default function Dashboard() {
   const [adviceError, setAdviceError] = useState('');
 
   // Cálculos automáticos usando useMemo para optimización
-  const totalIncome = useMemo(() => incomes.reduce((acc, curr) => acc + curr.monto, 0), [incomes]);
-  const totalDebts = useMemo(() => debts.reduce((acc, curr) => acc + curr.monto, 0), [debts]);
+  // Los ingresos desactivados no cuentan en los totales
+  const totalIncome = useMemo(() => incomes.filter(i => i.activo !== false).reduce((acc, curr) => acc + curr.monto, 0), [incomes]);
+  // Los gastos fijos y deudas desactivados (ya pagados este mes) no cuentan en los totales
+  const totalDebts = useMemo(() => debts.filter(d => d.activo !== false).reduce((acc, curr) => acc + curr.monto, 0), [debts]);
   const totalVariableExpenses = useMemo(() => variableExpenses.reduce((acc, curr) => acc + curr.monto, 0), [variableExpenses]);
-  const totalRealDebts = useMemo(() => realDebts.reduce((acc, curr) => acc + curr.monto, 0), [realDebts]);
+  const totalRealDebts = useMemo(() => realDebts.filter(d => d.activo !== false).reduce((acc, curr) => acc + curr.monto, 0), [realDebts]);
   const freeMoney = totalIncome - totalDebts - totalVariableExpenses - totalRealDebts;
 
   // Porcentaje de endeudamiento (Deudas reales / Ingresos * 100). Solo cuentan las deudas reales (préstamos, tarjetas), no los gastos fijos.
@@ -117,14 +122,67 @@ export default function Dashboard() {
     else alert("No se pudo actualizar la deuda. Intenta de nuevo.");
   };
 
-  // Formateador de moneda (Estilo peso/dólar genérico)
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+  // Activa/desactiva un registro (gasto fijo o deuda). Lo inactivo no cuenta en los totales.
+  const cambiarActivo = async (id, activo) => {
+    const { data, error } = await supabase
+      .from('finanzas_personales')
+      .update({ activo })
+      .eq('id', id)
+      .select();
+
+    if (error || !data) {
+      console.error("Error al cambiar el estado:", error?.message);
+      return null;
+    }
+    return data[0];
+  };
+
+  const toggleIncome = async (id, activo) => {
+    const updated = await cambiarActivo(id, activo);
+    if (updated) setIncomes(prev => prev.map(inc => inc.id === id ? updated : inc));
+    else alert("No se pudo cambiar el estado del ingreso. Intenta de nuevo.");
+  };
+
+  const toggleDebt = async (id, activo) => {
+    const updated = await cambiarActivo(id, activo);
+    if (updated) setDebts(prev => prev.map(debt => debt.id === id ? updated : debt));
+    else alert("No se pudo cambiar el estado del gasto fijo. Intenta de nuevo.");
+  };
+
+  const toggleRealDebt = async (id, activo) => {
+    const updated = await cambiarActivo(id, activo);
+    if (updated) setRealDebts(prev => prev.map(debt => debt.id === id ? updated : debt));
+    else alert("No se pudo cambiar el estado de la deuda. Intenta de nuevo.");
+  };
+
+  // Activa/desactiva todos los registros de una categoría a la vez
+  const cambiarActivoTodos = async (tipo, activo) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('finanzas_personales')
+      .update({ activo })
+      .eq('user_id', user.id)
+      .eq('tipo', tipo);
+
+    if (error) {
+      console.error("Error al cambiar el estado de la categoría:", error.message);
+      return false;
+    }
+    return true;
+  };
+
+  const toggleAllDebts = async (activo) => {
+    const ok = await cambiarActivoTodos('deuda', activo);
+    if (ok) setDebts(prev => prev.map(debt => ({ ...debt, activo })));
+    else alert("No se pudo cambiar el estado de los gastos fijos. Intenta de nuevo.");
+  };
+
+  const toggleAllRealDebts = async (activo) => {
+    const ok = await cambiarActivoTodos('deuda_real', activo);
+    if (ok) setRealDebts(prev => prev.map(debt => ({ ...debt, activo })));
+    else alert("No se pudo cambiar el estado de las deudas. Intenta de nuevo.");
   };
 
   // Función para cargar datos desde Supabase
@@ -211,7 +269,7 @@ export default function Dashboard() {
     
     // Generar ID temporal
     const tempId = `temp-${Date.now()}`;
-    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'ingreso' };
+    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'ingreso', activo: true };
 
     // Actualización optimista de la UI
     setIncomes(prev => [...prev, tempRecord]);
@@ -239,7 +297,7 @@ export default function Dashboard() {
     
     // Generar ID temporal
     const tempId = `temp-${Date.now()}`;
-    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'deuda' };
+    const tempRecord = { id: tempId, concepto: name, monto: amount, tipo: 'deuda', activo: true };
 
     // Actualización optimista de la UI
     setDebts(prev => [...prev, tempRecord]);
@@ -372,6 +430,35 @@ export default function Dashboard() {
   };
 
   const healthStatus = getFinancialHealth();
+
+  // Arma el resumen en Markdown con el estado actual (solo gastos fijos y deudas activos)
+  const construirResumen = () =>
+    generarResumenMarkdown({ incomes, debts, variableExpenses, realDebts, formatCurrency });
+
+  // Copia el resumen al portapapeles. Devuelve true si tuvo éxito (para el feedback del botón).
+  const copiarResumen = async () => {
+    try {
+      await navigator.clipboard.writeText(construirResumen());
+      return true;
+    } catch (e) {
+      console.error("Error al copiar al portapapeles:", e);
+      alert("No se pudo copiar. Revisa los permisos del navegador o usa 'Descargar .md'.");
+      return false;
+    }
+  };
+
+  // Descarga el resumen como archivo .md
+  const descargarResumen = () => {
+    const blob = new Blob([construirResumen()], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finanzas-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // Función para llamar a Gemini API
   const generateAdvice = async () => {
@@ -545,6 +632,7 @@ Dame tu análisis y tus consejos.`;
             updateIncome={updateIncome}
             formatCurrency={formatCurrency}
             guardarRegistro={guardarRegistro}
+            onToggle={toggleIncome}
           />
 
           <GestorDeudas
@@ -556,6 +644,8 @@ Dame tu análisis y tus consejos.`;
             updateDebt={updateDebt}
             formatCurrency={formatCurrency}
             guardarRegistro={guardarRegistro}
+            onToggle={toggleDebt}
+            onToggleAll={toggleAllDebts}
           />
         </div>
 
@@ -569,6 +659,8 @@ Dame tu análisis y tus consejos.`;
             removeRealDebt={removeRealDebt}
             updateRealDebt={updateRealDebt}
             formatCurrency={formatCurrency}
+            onToggle={toggleRealDebt}
+            onToggleAll={toggleAllRealDebts}
           />
 
           <GestorGastosVariables
@@ -581,6 +673,11 @@ Dame tu análisis y tus consejos.`;
             formatCurrency={formatCurrency}
           />
         </div>
+
+        <TarjetaExportar
+          onCopiar={copiarResumen}
+          onDescargar={descargarResumen}
+        />
 
         <TarjetaAsesorIA
           generateAdvice={generateAdvice}

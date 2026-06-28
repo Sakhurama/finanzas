@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient'
 // 1. Importamos tus Pantallas (Pages)
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import PlanificarViajes from './pages/PlanificarViajes'
 
 // 2. Importamos el componente Guardia (lo crearemos en el siguiente paso si no lo tienes)
 import ProtectedRoute from './components/ProtectedRoute'
@@ -53,6 +54,7 @@ function App() {
         {/* RUTAS PRIVADAS: Protegidas por nuestro componente guardia */}
         <Route element={<ProtectedRoute session={session} />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/planificar-viajes" element={<PlanificarViajes />} />
           {/* Si en el futuro creas /perfil, lo agregarías aquí adentro */}
         </Route>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Pencil, Check, X } from 'lucide-react';
+import { Trash2, Pencil, Check, X, ToggleLeft, ToggleRight } from 'lucide-react';
 
 // Estilos de color por tipo de gestor (se reutiliza el mismo acento que la cabecera de cada tarjeta)
 const COLORS = {
@@ -13,8 +13,10 @@ const COLORS = {
 const formatMiles = (valor) => new Intl.NumberFormat('es-CO').format(valor);
 
 // Fila de un registro financiero: muestra concepto + monto, y permite editarlo o eliminarlo en línea.
-export default function FilaRegistro({ item, color = 'emerald', onUpdate, onRemove, formatCurrency }) {
+// Si se pasa `onToggle`, además permite activar/desactivar el registro (excluyéndolo de los totales).
+export default function FilaRegistro({ item, color = 'emerald', onUpdate, onRemove, formatCurrency, onToggle }) {
   const c = COLORS[color] || COLORS.emerald;
+  const activo = item.activo !== false;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.concepto);
@@ -92,10 +94,20 @@ export default function FilaRegistro({ item, color = 'emerald', onUpdate, onRemo
   }
 
   return (
-    <div className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-colors">
-      <span className="font-medium text-slate-700">{item.concepto}</span>
+    <div className={`flex justify-between items-center p-3 rounded-xl border border-transparent transition-colors ${activo ? 'hover:bg-slate-50 hover:border-slate-100' : 'opacity-50'}`}>
+      <span className={`font-medium ${activo ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{item.concepto}</span>
       <div className="flex items-center gap-4">
-        <span className={`${c.text} font-semibold`}>{formatCurrency(item.monto)}</span>
+        <span className={`font-semibold ${activo ? c.text : 'text-slate-400 line-through'}`}>{formatCurrency(item.monto)}</span>
+        {onToggle && (
+          <button
+            type="button"
+            onClick={() => onToggle(item.id, !activo)}
+            className={`transition-colors ${activo ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-slate-400'}`}
+            title={activo ? 'Desactivar (ya pagado este mes)' : 'Activar'}
+          >
+            {activo ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+          </button>
+        )}
         <button
           type="button"
           onClick={startEdit}

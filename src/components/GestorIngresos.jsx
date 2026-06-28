@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import InputPesos from './InputPesos';
 import FilaRegistro from './FilaRegistro';
 
-export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, updateIncome, formatCurrency, guardarRegistro }) {
+export default function GestorIngresos({ incomes, newIncome, setNewIncome, handleAddIncome, removeIncome, updateIncome, formatCurrency, guardarRegistro, onToggle }) {
 
     const [displayValue, setDisplayValue] = useState('');
 
@@ -76,6 +76,7 @@ export default function GestorIngresos({ incomes, newIncome, setNewIncome, handl
               onUpdate={updateIncome}
               onRemove={removeIncome}
               formatCurrency={formatCurrency}
+              onToggle={onToggle}
             />
           ))
         )}

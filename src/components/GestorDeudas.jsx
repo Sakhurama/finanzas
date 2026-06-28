@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import FilaRegistro from './FilaRegistro';
 
-export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt, removeDebt, updateDebt, formatCurrency }) {
+export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt, removeDebt, updateDebt, formatCurrency, onToggle, onToggleAll }) {
+      const todosActivos = debts.length > 0 && debts.every(d => d.activo !== false);
+
       const [displayValue, setDisplayValue] = useState('');
   
       const handleChange = (e) => {
@@ -34,8 +36,19 @@ export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h3 className="text-lg font-bold text-rose-600 mb-4 border-b border-slate-100 pb-2">Mis Gastos Fijos</h3>
-      
+      <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+        <h3 className="text-lg font-bold text-rose-600">Mis Gastos Fijos</h3>
+        {debts.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onToggleAll(!todosActivos)}
+            className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            {todosActivos ? 'Desactivar todo' : 'Activar todo'}
+          </button>
+        )}
+      </div>
+
       {/* Formulario Nueva Deuda */}
       <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-2 mb-6">
         <input 
@@ -75,6 +88,7 @@ export default function GestorDeudas({ debts, newDebt, setNewDebt, handleAddDebt
               onUpdate={updateDebt}
               onRemove={removeDebt}
               formatCurrency={formatCurrency}
+              onToggle={onToggle}
             />
           ))
         )}

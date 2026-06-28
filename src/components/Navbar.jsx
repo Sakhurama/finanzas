@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Wallet, Menu, X, LogOut, User, Plane } from 'lucide-react';
 
@@ -21,26 +22,26 @@ return (
         <div className="flex justify-between items-center h-16">
         
         {/* Logo y Título (Izquierda) */}
-        <div className="flex items-center gap-2">
+        <Link to="/dashboard" className="flex items-center gap-2">
             <div className="bg-indigo-100 p-2 rounded-lg">
             <Wallet className="w-5 h-5 text-indigo-600" />
             </div>
             <span className="text-xl font-bold text-slate-900 hidden sm:block">
             Control Financiero
             </span>
-        </div>
+        </Link>
 
         {/* Menú de Escritorio (Derecha) - Oculto en móviles */}
         <div className="hidden md:flex items-center gap-6">
             
-            {/* Nueva opción: Planificar Viajes (Simulada) */}
-            <button 
+            {/* Planificar Viajes */}
+            <Link
+            to="/planificar-viajes"
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
-            title="Próximamente"
             >
             <Plane className="w-4 h-4" />
             Planificar Viajes
-            </button>
+            </Link>
 
             <div className="h-6 w-px bg-slate-200"></div> {/* Separador vertical */}
 
@@ -97,12 +98,14 @@ return (
         <div className="h-px w-full bg-slate-200"></div> {/* Separador móvil */}
 
         {/* Botón Planificar Viajes móvil */}
-        <button 
+        <Link
+            to="/planificar-viajes"
+            onClick={() => setIsOpen(false)}
             className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm"
         >
             <Plane className="w-4 h-4 text-indigo-500" />
             Planificar Viajes
-        </button>
+        </Link>
 
         {/* Botón cerrar sesión móvil */}
         <button 

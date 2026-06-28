@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import FilaRegistro from './FilaRegistro';
 
-export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealDebt, handleAddRealDebt, removeRealDebt, updateRealDebt, formatCurrency }) {
+export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealDebt, handleAddRealDebt, removeRealDebt, updateRealDebt, formatCurrency, onToggle, onToggleAll }) {
+      const todosActivos = realDebts.length > 0 && realDebts.every(d => d.activo !== false);
+
       const [displayValue, setDisplayValue] = useState('');
 
       const handleChange = (e) => {
@@ -34,9 +36,20 @@ export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealD
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h3 className="text-lg font-bold text-violet-600 mb-1 border-b border-slate-100 pb-2">
-        Mis Deudas <span className="text-xs font-normal text-slate-400">(cuota mensual)</span>
-      </h3>
+      <div className="flex items-center justify-between mb-1 border-b border-slate-100 pb-2">
+        <h3 className="text-lg font-bold text-violet-600">
+          Mis Deudas <span className="text-xs font-normal text-slate-400">(cuota mensual)</span>
+        </h3>
+        {realDebts.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onToggleAll(!todosActivos)}
+            className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            {todosActivos ? 'Desactivar todo' : 'Activar todo'}
+          </button>
+        )}
+      </div>
       <p className="text-xs text-slate-400 mb-4 mt-2">Préstamos, tarjetas y créditos. Registra el pago mensual.</p>
 
       {/* Formulario Nueva Deuda */}
@@ -78,6 +91,7 @@ export default function GestorDeudasReales({ realDebts, newRealDebt, setNewRealD
               onUpdate={updateRealDebt}
               onRemove={removeRealDebt}
               formatCurrency={formatCurrency}
+              onToggle={onToggle}
             />
           ))
         )}
