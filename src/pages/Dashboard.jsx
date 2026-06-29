@@ -674,6 +674,9 @@ Dame tu análisis y tus consejos.`;
           />
         </div>
 
+        {/* Dinero libre (resumen final, después de registrar todo) */}
+        <TarjetaDineroLibre freeMoney={formatCurrency(freeMoney)} />
+
         <TarjetaExportar
           onCopiar={copiarResumen}
           onDescargar={descargarResumen}
