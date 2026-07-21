@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { formatCurrency } from '../utils/format';
 import { GASTOS_SUGERIDOS, totalViaje } from '../utils/viajes';
+import { generarResumenViajeMarkdown } from '../utils/exportarMarkdown';
 
 import Navbar from '../components/Navbar';
 import GestorViajes from '../components/GestorViajes';
@@ -182,6 +183,38 @@ export default function PlanificarViajes() {
     setGastos((prev) => prev.map((g) => (g.id === id ? data[0] : g)));
   };
 
+  // Comparte los gastos del viaje activo como Markdown simple. En móvil abre el menú
+  // nativo (WhatsApp, Telegram...); si no está disponible, copia al portapapeles.
+  // Devuelve true solo cuando se copió, para el feedback "¡Copiado!" del botón.
+  const compartirGastos = async () => {
+    if (!viajeActivo) return false;
+
+    const texto = generarResumenViajeMarkdown({
+      viaje: viajeActivo,
+      gastos: gastosActivos,
+      formatCurrency,
+    });
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: texto });
+        return false; // el menú nativo ya da su propio feedback
+      } catch (e) {
+        if (e.name === 'AbortError') return false; // el usuario cerró el menú
+        // Cualquier otro fallo: seguimos con el portapapeles
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    } catch (e) {
+      console.error('Error al copiar al portapapeles:', e);
+      alert('No se pudo copiar. Revisa los permisos del navegador.');
+      return false;
+    }
+  };
+
   // Meta de ahorro y abonos del viaje activo
   const actualizarViaje = async (id, cambios) => {
     const { data, error } = await supabase
@@ -237,6 +270,7 @@ export default function PlanificarViajes() {
               handleAddGasto={handleAddGasto}
               removeGasto={removeGasto}
               updateGasto={updateGasto}
+              onCompartir={compartirGastos}
               formatCurrency={formatCurrency}
             />
           ) : (

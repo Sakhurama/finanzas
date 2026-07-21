@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Receipt } from 'lucide-react';
+import { Plus, Receipt, Share2, Check } from 'lucide-react';
 import FilaGastoViaje from './FilaGastoViaje';
 import { totalViaje } from '../utils/viajes';
 
@@ -13,9 +13,19 @@ export default function GestorGastosViaje({
   handleAddGasto,
   removeGasto,
   updateGasto,
+  onCompartir,
   formatCurrency,
 }) {
   const [displayValue, setDisplayValue] = useState('');
+  const [copiado, setCopiado] = useState(false);
+
+  const handleCompartir = async () => {
+    const ok = await onCompartir();
+    if (ok) {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    }
+  };
 
   const handleChange = (e) => {
     const numericString = e.target.value.replace(/\D/g, '');
@@ -40,14 +50,26 @@ export default function GestorGastosViaje({
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+      <div className="flex items-center justify-between gap-2 mb-4 border-b border-slate-100 pb-2">
         <h3 className="flex items-center gap-2 text-lg font-bold text-sky-600">
           <Receipt className="w-5 h-5" />
           Gastos del viaje
         </h3>
-        <span className="text-sm font-semibold text-slate-500">
-          Total: {formatCurrency(total)}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-slate-500 whitespace-nowrap">
+            Total: {formatCurrency(total)}
+          </span>
+          <button
+            type="button"
+            onClick={handleCompartir}
+            disabled={gastos.length === 0}
+            title="Copiar los gastos en Markdown para compartirlos por chat"
+            className="flex items-center gap-1.5 bg-sky-50 hover:bg-sky-100 text-sky-600 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 disabled:hover:bg-sky-50 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {copiado ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{copiado ? '¡Copiado!' : 'Compartir'}</span>
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 mb-6">
