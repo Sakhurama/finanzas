@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Receipt, Share2, Check } from 'lucide-react';
+import { Plus, Receipt, Share2, Copy, Check } from 'lucide-react';
 import FilaGastoViaje from './FilaGastoViaje';
 import { totalViaje } from '../utils/viajes';
 
@@ -14,6 +14,7 @@ export default function GestorGastosViaje({
   removeGasto,
   updateGasto,
   onCompartir,
+  puedeCompartir,
   formatCurrency,
 }) {
   const [displayValue, setDisplayValue] = useState('');
@@ -63,11 +64,23 @@ export default function GestorGastosViaje({
             type="button"
             onClick={handleCompartir}
             disabled={gastos.length === 0}
-            title="Copiar los gastos en Markdown para compartirlos por chat"
+            title={
+              puedeCompartir
+                ? 'Compartir los gastos en Markdown por chat'
+                : 'Copiar los gastos en Markdown para pegarlos en un chat'
+            }
             className="flex items-center gap-1.5 bg-sky-50 hover:bg-sky-100 text-sky-600 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 disabled:hover:bg-sky-50 cursor-pointer disabled:cursor-not-allowed"
           >
-            {copiado ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-            <span className="hidden sm:inline">{copiado ? '¡Copiado!' : 'Compartir'}</span>
+            {copiado ? (
+              <Check className="w-4 h-4" />
+            ) : puedeCompartir ? (
+              <Share2 className="w-4 h-4" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">
+              {copiado ? '¡Copiado!' : puedeCompartir ? 'Compartir' : 'Copiar'}
+            </span>
           </button>
         </div>
       </div>

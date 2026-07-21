@@ -183,8 +183,19 @@ export default function PlanificarViajes() {
     setGastos((prev) => prev.map((g) => (g.id === id ? data[0] : g)));
   };
 
-  // Comparte los gastos del viaje activo como Markdown simple. En móvil abre el menú
-  // nativo (WhatsApp, Telegram...); si no está disponible, copia al portapapeles.
+  // El menú nativo de compartir solo se usa en móvil, donde lleva directo a WhatsApp
+  // y compañía. En escritorio siempre copiamos al portapapeles: Chrome y Edge en
+  // Windows soportan navigator.share, pero abren el panel de compartir del sistema,
+  // que no es lo que se espera. Detectamos el dispositivo, no la API.
+  const puedeCompartir = useMemo(
+    () =>
+      Boolean(navigator.share) &&
+      (navigator.userAgentData?.mobile ?? window.matchMedia('(pointer: coarse)').matches),
+    []
+  );
+
+  // Exporta los gastos del viaje activo como Markdown simple: menú nativo en móvil,
+  // portapapeles en escritorio.
   // Devuelve true solo cuando se copió, para el feedback "¡Copiado!" del botón.
   const compartirGastos = async () => {
     if (!viajeActivo) return false;
@@ -195,7 +206,7 @@ export default function PlanificarViajes() {
       formatCurrency,
     });
 
-    if (navigator.share) {
+    if (puedeCompartir) {
       try {
         await navigator.share({ text: texto });
         return false; // el menú nativo ya da su propio feedback
@@ -271,6 +282,7 @@ export default function PlanificarViajes() {
               removeGasto={removeGasto}
               updateGasto={updateGasto}
               onCompartir={compartirGastos}
+              puedeCompartir={puedeCompartir}
               formatCurrency={formatCurrency}
             />
           ) : (
