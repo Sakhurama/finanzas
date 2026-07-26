@@ -36,6 +36,10 @@ export default function Dashboard() {
   // Umbral de endeudamiento saludable (ajustable por el usuario). Default sugerido: 36% (estándar deuda-ingreso/DTI)
   const [umbral, setUmbral] = useState(36);
 
+  // El ahorro sugerido se puede desactivar (no siempre alcanza para ahorrar).
+  // Al desactivarlo, ese 20% vuelve al gasto semanal.
+  const [ahorroActivo, setAhorroActivo] = useState(true);
+
   // Estado para la IA de Gemini
   const [advice, setAdvice] = useState('');
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
@@ -53,9 +57,11 @@ export default function Dashboard() {
   // Porcentaje de endeudamiento (Deudas reales / Ingresos * 100). Solo cuentan las deudas reales (préstamos, tarjetas), no los gastos fijos.
   const debtPercentage = totalIncome > 0 ? ((totalRealDebts / totalIncome) * 100).toFixed(1) : 0;
 
-  // Gasto semanal saludable: Dinero libre menos un 20% de ahorro sugerido, dividido en 4 semanas
-  const weeklyBudget = freeMoney > 0 ? (freeMoney * 0.8) / 4 : 0;
-  const suggestedSavings = freeMoney > 0 ? freeMoney * 0.2 : 0;
+  // Ahorro sugerido: 20% del dinero libre. Si el usuario lo desactiva, no se aparta nada.
+  const suggestedSavings = ahorroActivo && freeMoney > 0 ? freeMoney * 0.2 : 0;
+  // Gasto semanal saludable: el dinero libre que queda tras el ahorro, dividido en 4 semanas.
+  // Con el ahorro desactivado, el 100% del dinero libre se reparte en la semana.
+  const weeklyBudget = freeMoney > 0 ? (freeMoney - suggestedSavings) / 4 : 0;
 
   // Función para guardar registros en Supabase
   const guardarRegistro = async (name, amount, type) => {
@@ -224,19 +230,22 @@ export default function Dashboard() {
     setVariableExpenses(gastosVariables);
     setRealDebts(deudasReales);
 
-    // Cargamos la preferencia del umbral de endeudamiento (si la tabla existe)
+    // Cargamos las preferencias del usuario (umbral y ahorro sugerido), si la tabla existe
     try {
       const { data: pref } = await supabase
         .from('preferencias_usuario')
-        .select('umbral_endeudamiento')
+        .select('umbral_endeudamiento, ahorro_activo')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (pref && pref.umbral_endeudamiento != null) {
         setUmbral(pref.umbral_endeudamiento);
       }
+      if (pref && pref.ahorro_activo != null) {
+        setAhorroActivo(pref.ahorro_activo);
+      }
     } catch (e) {
-      console.warn("No se pudo cargar la preferencia de umbral:", e.message);
+      console.warn("No se pudieron cargar las preferencias:", e.message);
     }
   };
 
@@ -250,6 +259,25 @@ export default function Dashboard() {
       .upsert({ user_id: user.id, umbral_endeudamiento: valor }, { onConflict: 'user_id' });
 
     if (error) console.error("Error al guardar el umbral:", error.message);
+  };
+
+  // Activa/desactiva el ahorro sugerido. Actualiza la UI de inmediato y persiste la preferencia.
+  const toggleAhorro = async (valor) => {
+    const anterior = ahorroActivo;
+    setAhorroActivo(valor);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('preferencias_usuario')
+      .upsert({ user_id: user.id, ahorro_activo: valor }, { onConflict: 'user_id' });
+
+    if (error) {
+      console.error("Error al guardar la preferencia de ahorro:", error.message);
+      setAhorroActivo(anterior); // Revertimos si no se pudo guardar
+      alert("No se pudo guardar la preferencia de ahorro. Intenta de nuevo.");
+    }
   };
 
   // setUmbral actualiza la UI al mover el slider; guardarUmbral persiste al soltar (evita escrituras excesivas)
@@ -490,6 +518,7 @@ Reglas para los consejos:
 - Si el porcentaje de endeudamiento supera el umbral del usuario, prioriza estrategias para reducir las deudas reales.
 - Si el dinero libre es negativo, el consejo principal debe ser cómo equilibrar el presupuesto, recortando primero gastos variables concretos y solo después gastos fijos.
 - Usa el presupuesto semanal sugerido y el ahorro mensual sugerido que te da la app como referencia; no inventes otras cifras de referencia.
+- Si el usuario desactivó el ahorro sugerido, respeta esa decisión: no lo regañes ni insistas en ahorrar un porcentaje fijo. Enfócate en que el gasto semanal le alcance y, como mucho, sugiere un ahorro pequeño y realista.
 - Sé concreto y conciso; evita consejos genéricos.`;
 
     const userPrompt = `Estas son mis finanzas mensuales (moneda COP):
@@ -512,7 +541,9 @@ INDICADORES
 - Umbral que considero saludable: ${umbral}%
 - Estado de salud según la app: ${healthStatus.text}
 - Presupuesto semanal sugerido por la app: ${formatCurrency(weeklyBudget)}
-- Ahorro mensual sugerido por la app (20% del dinero libre): ${formatCurrency(suggestedSavings)}
+- Ahorro mensual sugerido por la app: ${ahorroActivo
+      ? `${formatCurrency(suggestedSavings)} (20% del dinero libre)`
+      : 'desactivado por mí, porque ahora mismo no puedo ahorrar (todo el dinero libre va al gasto semanal)'}
 
 Dame tu análisis y tus consejos.`;
 
@@ -617,6 +648,8 @@ Dame tu análisis y tus consejos.`;
           <TarjetaPresupuesto
             weeklyBudget={weeklyBudget}
             suggestedSavings={suggestedSavings}
+            ahorroActivo={ahorroActivo}
+            onToggleAhorro={toggleAhorro}
             formatCurrency={formatCurrency}
           />
         </div>
